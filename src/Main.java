@@ -7,18 +7,15 @@ public class Main {
     public static void main(String[] args) {
         final int PATHS = 1000;
         ExecutorService executor = Executors.newFixedThreadPool(PATHS);
-        List<Future<Integer>> futures = new ArrayList<>();
 
-        List<String> roads = new CopyOnWriteArrayList<>();
-
-
+        List<Future<String>> futuresRoads = new ArrayList<>();
         for (int i = 0; i < PATHS; i++) {
-            executor.submit(new RoadGenerator(roads,"RLRFR", 100));
+            futuresRoads.add(executor.submit(new RoadGeneratorCallable("RLRFR", 100)));
         }
-//        executor.shutdown();
 
-        for (String road : roads) {
-            Callable<Integer> logic = () -> {
+        futuresRoads.forEach(futureRoad -> {
+            try {
+                String road = futureRoad.get();
                 int countOfR = 0;
                 char[] roadInChar;
                 roadInChar = road.toCharArray();
@@ -27,25 +24,19 @@ public class Main {
                         countOfR++;
                     }
                 }
-                return countOfR;
-            };
-            futures.add(executor.submit(logic));
-        }
-
-        futures.forEach(future->{
-            try {
-                int count = future.get();
                 synchronized (sizeToFreq) {
-                    if(sizeToFreq.containsKey(count)) {
-                        sizeToFreq.put(count, sizeToFreq.get(count) + 1);
+                    if (sizeToFreq.containsKey(countOfR)) {
+                        sizeToFreq.put(countOfR, sizeToFreq.get(countOfR) + 1);
                     } else {
-                        sizeToFreq.put(count, 1);
+                        sizeToFreq.put(countOfR, 1);
                     }
                 }
+
             } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(e);
             }
         });
+
         executor.shutdown();
 
         System.out.println(sizeToFreq);
@@ -60,20 +51,20 @@ public class Main {
         return route.toString();
     }
 
-    static class RoadGenerator implements Runnable {
-        private final List<String> roads;
+    static class RoadGeneratorCallable implements Callable<String> {
         private final String letters;
+
         private final int length;
 
-        public RoadGenerator(List<String> roads, String letters, int length) {
-            this.roads = roads;
+        public RoadGeneratorCallable(String letters, int length) {
             this.letters = letters;
             this.length = length;
         }
 
         @Override
-        public void run() {
-            roads.add(generateRoute(letters, length));
+        public String call() throws Exception {
+            return generateRoute(letters, length);
         }
     }
+
 }
