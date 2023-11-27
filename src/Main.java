@@ -8,6 +8,26 @@ public class Main {
         final int PATHS = 1000;
         ExecutorService executor = Executors.newFixedThreadPool(PATHS);
 
+        //текущий лидер
+        new Thread(() -> {
+            while (!Thread.interrupted()) {
+                synchronized (sizeToFreq) {
+                    try {
+                        sizeToFreq.wait();
+                        int max = 0;
+                        for (int key : sizeToFreq.keySet()) {
+                            if (sizeToFreq.get(max) == null || sizeToFreq.get(max) < sizeToFreq.get(key)) {
+                                max = key;
+                            }
+                        }
+                        System.out.println("текущий лидер - " + max);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        }).start();
+
         List<Future<String>> futuresRoads = new ArrayList<>();
         for (int i = 0; i < PATHS; i++) {
             futuresRoads.add(executor.submit(new RoadGeneratorCallable("RLRFR", 100)));
@@ -30,15 +50,14 @@ public class Main {
                     } else {
                         sizeToFreq.put(countOfR, 1);
                     }
+                    sizeToFreq.notify();
                 }
 
             } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(e);
             }
         });
-
         executor.shutdown();
-
         System.out.println(sizeToFreq);
     }
 
