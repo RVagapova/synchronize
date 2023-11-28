@@ -1,5 +1,8 @@
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Main {
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
@@ -7,20 +10,14 @@ public class Main {
     public static void main(String[] args) {
         final int PATHS = 1000;
         ExecutorService executor = Executors.newFixedThreadPool(PATHS);
-
-        List<Future<String>> futuresRoads = new ArrayList<>();
         for (int i = 0; i < PATHS; i++) {
-            futuresRoads.add(executor.submit(new RoadGeneratorCallable("RLRFR", 100)));
-        }
-
-        futuresRoads.forEach(futureRoad -> {
-            try {
-                String road = futureRoad.get();
+            executor.submit(() -> {
+                String road = generateRoute("RLRFR", 100);
                 int countOfR = 0;
                 char[] roadInChar;
                 roadInChar = road.toCharArray();
-                for (int i = 0; i < 100; i++) {
-                    if (roadInChar[i] == 'R') {
+                for (int i1 = 0; i1 < 100; i1++) {
+                    if (roadInChar[i1] == 'R') {
                         countOfR++;
                     }
                 }
@@ -31,11 +28,8 @@ public class Main {
                         sizeToFreq.put(countOfR, 1);
                     }
                 }
-
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        });
+            });
+        }
 
         executor.shutdown();
 
@@ -50,21 +44,4 @@ public class Main {
         }
         return route.toString();
     }
-
-    static class RoadGeneratorCallable implements Callable<String> {
-        private final String letters;
-
-        private final int length;
-
-        public RoadGeneratorCallable(String letters, int length) {
-            this.letters = letters;
-            this.length = length;
-        }
-
-        @Override
-        public String call() throws Exception {
-            return generateRoute(letters, length);
-        }
-    }
-
 }
